@@ -90,7 +90,13 @@ public:
 
     // Called when we detect from vsync signals that the refresh rate changed.
     // This way we can move out of early offsets if no longer necessary.
-    void onRefreshRateChangeCompleted();
+    void onRefreshRateChangeCompleted() {
+        if (!mRefreshRateChangePending) {
+            return;
+        }
+        mRefreshRateChangePending = false;
+        updateOffsets();
+    }
 
     // Called when the display is presenting a new frame. usedRenderEngine
     // should be set to true if RenderEngine was involved with composing the new

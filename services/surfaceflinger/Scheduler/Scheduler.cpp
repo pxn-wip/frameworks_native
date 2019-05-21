@@ -469,6 +469,9 @@ void Scheduler::resetKernelTimerCallback() {
             resyncToHardwareVsync(true, mGetVsyncPeriod());
         }
     }
+    if (mGetVsyncPeriod) {
+        resyncToHardwareVsync(true, mGetVsyncPeriod());
+    }
 }
 
 void Scheduler::expiredTimerCallback() {

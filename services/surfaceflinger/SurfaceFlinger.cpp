@@ -1111,6 +1111,17 @@ void SurfaceFlinger::setDesiredActiveConfig(const ActiveConfigInfo& info) {
         mVsyncModulator.setPhaseOffsets(early, gl, late,
                                         mPhaseOffsets->getOffsetThresholdForNextVsync());
     }
+
+        // We should only move to early offsets when we know that the refresh
+        // rate will change. Otherwise, we may be stuck in early offsets
+        // forever, as onRefreshRateChangeDetected will not be called.
+        if (mDesiredActiveConfig.event == Scheduler::ConfigEvent::Changed) {
+            mVsyncModulator.onRefreshRateChangeInitiated();
+        }
+        mPhaseOffsets->setRefreshRateType(info.type);
+        const auto [early, gl, late] = mPhaseOffsets->getCurrentOffsets();
+        mVsyncModulator.setPhaseOffsets(early, gl, late);
+    }
     mDesiredActiveConfigChanged = true;
     ATRACE_INT("DesiredActiveConfigChanged", mDesiredActiveConfigChanged);
 
@@ -1203,6 +1214,14 @@ bool SurfaceFlinger::performSetActiveConfig() {
         // display is not valid or we are already in the requested mode
         // on both cases there is nothing left to do
         desiredActiveConfigChangeDone();
+        std::lock_guard<std::mutex> lock(mActiveConfigLock);
+        mDesiredActiveConfig.event = Scheduler::ConfigEvent::None;
+        mDesiredActiveConfigChanged = false;
+        // Update scheduler with the correct vsync period as a no-op.
+        // Otherwise, there exists a race condition where we get stuck in the
+        // incorrect vsync period.
+        mScheduler->resyncToHardwareVsync(false, getVsyncPeriod());
+        ATRACE_INT("DesiredActiveConfigChanged", mDesiredActiveConfigChanged);
         return false;
     }
 
@@ -1211,6 +1230,15 @@ bool SurfaceFlinger::performSetActiveConfig() {
     // Make sure the desired config is still allowed
     if (!isDisplayConfigAllowed(desiredActiveConfig.configId)) {
         desiredActiveConfigChangeDone();
+        std::lock_guard<std::mutex> lock(mActiveConfigLock);
+        mDesiredActiveConfig.event = Scheduler::ConfigEvent::None;
+        mDesiredActiveConfig.configId = display->getActiveConfig();
+        mDesiredActiveConfigChanged = false;
+        // Update scheduler with the current vsync period as a no-op.
+        // Otherwise, there exists a race condition where we get stuck in the
+        // incorrect vsync period.
+        mScheduler->resyncToHardwareVsync(false, getVsyncPeriod());
+        ATRACE_INT("DesiredActiveConfigChanged", mDesiredActiveConfigChanged);
         return false;
     }
 
