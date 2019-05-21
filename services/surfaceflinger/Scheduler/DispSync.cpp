@@ -92,12 +92,9 @@ public:
         mPeriod = period;
         if (!mModelLocked && referenceTimeChanged) {
             for (auto& eventListener : mEventListeners) {
-                eventListener.mLastEventTime = mReferenceTime + mPhase + eventListener.mPhase;
-                // If mLastEventTime is after mReferenceTime (can happen when positive phase offsets
-                // are used) we treat it as like it happened in previous period.
-                if (eventListener.mLastEventTime > mReferenceTime) {
-                    eventListener.mLastEventTime -= mPeriod;
-                }
+                eventListener.mHasFired = false;
+                eventListener.mLastEventTime =
+                        mReferenceTime - mPeriod + mPhase + eventListener.mPhase;
             }
         }
         if (mTraceDetailedInfo) {
@@ -126,6 +123,13 @@ public:
 
     void unlockModel() {
         Mutex::Autolock lock(mMutex);
+        if (mModelLocked) {
+            for (auto& eventListener : mEventListeners) {
+                if (eventListener.mLastEventTime > mReferenceTime) {
+                    eventListener.mHasFired = true;
+                }
+            }
+        }
         mModelLocked = false;
         ATRACE_INT("DispSync:ModelLocked", mModelLocked);
     }
@@ -253,6 +257,10 @@ public:
             listener.mLastCallbackTime = listener.mLastEventTime + mWakeupLatency;
         } else {
             listener.mLastCallbackTime = lastCallbackTime;
+        }
+
+        if (!mModelLocked && listener.mLastEventTime > mReferenceTime) {
+            listener.mHasFired = true;
         }
 
         mEventListeners.push_back(listener);
