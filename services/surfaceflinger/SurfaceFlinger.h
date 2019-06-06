@@ -315,11 +315,18 @@ public:
     // TODO: this should be made accessible only to MessageQueue
     void onMessageReceived(int32_t what);
 
+<<<<<<< HEAD
     // populates the expected present time for this frame.
     // When we are in negative offsets, we perform a correction so that the
     // predicted vsync for the *next* frame is used instead.
     void populateExpectedPresentTime();
     nsecs_t getExpectedPresentTime() const { return mExpectedPresentTime; }
+=======
+    // Returns the expected present time for this frame.
+    // When we are in negative offsets, we perform a correction so that the
+    // predicted vsync for the *next* frame is used instead.
+    nsecs_t getExpectedPresentTime();
+>>>>>>> 287bdbe7b... [SurfaceFlinger] correct present time for negative phase offsets
 
     // for debugging only
     // TODO: this should be made accessible only to HWComposer
