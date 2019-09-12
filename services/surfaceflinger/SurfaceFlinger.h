@@ -527,6 +527,7 @@ private:
     void setPowerModeOnMainThread(const sp<IBinder>& displayToken, int mode);
     // For Animation Hint
     void setDisplayAnimating(const sp<DisplayDevice>& hw);
+    void setLayerAsMask(const sp<DisplayDevice>& hw, const uint64_t& layerId);
 
     /* ------------------------------------------------------------------------
      * Message handling
